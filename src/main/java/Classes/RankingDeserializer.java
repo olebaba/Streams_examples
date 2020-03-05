@@ -17,20 +17,14 @@ public class RankingDeserializer implements Deserializer<RankingElements> {
 
     @Override
     public RankingElements deserialize(String s, byte[] bytes) {
-        if(bytes == null) return null;
-
-        try {
-            return new ObjectMapper().readValue(bytes, RankingElements.class);
-        } catch (IOException jpe){
-            jpe.printStackTrace();
+        ObjectMapper objectMapper = new ObjectMapper();
+        RankingElements rankingElements = null;
+        try{
+            rankingElements = objectMapper.readValue(bytes, RankingElements.class);
+        }catch (Exception e){
+            e.printStackTrace();
         }
-
-        return null;
-    }
-
-    @Override
-    public RankingElements deserialize(String topic, Headers headers, byte[] data) {
-        return null;
+        return rankingElements;
     }
 
     @Override

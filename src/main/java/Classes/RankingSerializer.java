@@ -16,20 +16,14 @@ public class RankingSerializer implements Serializer<RankingElements> {
 
     @Override
     public byte[] serialize(String s, RankingElements rankingElements) {
-        if(rankingElements == null) return null;
-
-        try {
-            return new ObjectMapper().writeValueAsBytes(rankingElements);
-        } catch (JsonProcessingException e) {
+        byte[] retval = null;
+        ObjectMapper objectMapper = new ObjectMapper();
+        try{
+            retval = objectMapper.writeValueAsString(rankingElements).getBytes();
+        }catch (Exception e){
             e.printStackTrace();
         }
-
-        return null;
-    }
-
-    @Override
-    public byte[] serialize(String topic, Headers headers, RankingElements data) {
-        return new byte[0];
+        return retval;
     }
 
     @Override

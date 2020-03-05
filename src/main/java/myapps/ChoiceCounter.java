@@ -1,27 +1,22 @@
 package myapps;
 
+import Classes.RankingDeserializer;
 import Classes.RankingElements;
+import Classes.RankingSerializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.json.JsonSerializer;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.examples.pageview.PageViewTypedDemo;
+import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.kstream.KeyValueMapper;
 
-import java.util.Arrays;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
@@ -36,24 +31,17 @@ public class ChoiceCounter {
 
         final StreamsBuilder builder = new StreamsBuilder();
 
-        final Serializer<JsonNode> jsonNodeSerializer = new JsonSerializer();
-        final Deserializer<JsonNode> jsonNodeDeserializer = new JsonDeserializer();
-        final Serde<JsonNode> jsonNodeSerde = Serdes.serdeFrom(jsonNodeSerializer, jsonNodeDeserializer);
+        final Serializer<RankingElements> rankingElementsSerializer = new RankingSerializer();
+        final Deserializer<RankingElements> rankingElementsDeserializer = new RankingDeserializer();
+        final Serde<RankingElements> rankingElementsSerde =
+                Serdes.serdeFrom(rankingElementsSerializer, rankingElementsDeserializer);
 
-        KStream<String, JsonNode> rankingSource = builder
-                .stream("ranking_element_choices", Consumed.with(Serdes.String(), jsonNodeSerde));
+        KStream<String, RankingElements> rankingSource = builder
+                .stream("ranking_element_choices", Consumed.with(Serdes.String(), rankingElementsSerde));
 
-        //rankingSource.flatMapValues(jsonNode -> record.get(""))
+        //rankingSource.map((s, rankingElements) -> new KeyValue<>(rankingElements.rankingElementId, rankingElements))
+        //        .groupBy((integer, rankingElements) -> )
 
-        /*KStream<String, RankingElements> source = builder
-                .stream("ranking_element_choices", Consumed.with(Serdes.String()
-                        , new PageViewTypedDemo.JSONSerde<>()));
-
-        source.flatMapValues(value -> Arrays.asList(value.toLowerCase(Locale.getDefault())))
-                .groupBy((key, value) -> value)
-                .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("counts-store"))
-                .toStream()
-                .to("ranking_element_counter", Produced.with(Serdes.String(), Serdes.Long()));
 
         final Topology topology = builder.build();
         final KafkaStreams streams = new KafkaStreams(topology, props);
@@ -72,7 +60,7 @@ public class ChoiceCounter {
             latch.await();
         }catch (Throwable e){
             System.exit(1);
-        }*/
+        }
         System.exit(0);
     }
 }
