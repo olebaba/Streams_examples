@@ -39,8 +39,9 @@ public class ChoiceCounter {
         KStream<String, RankingElements> rankingSource = builder
                 .stream("ranking_element_choices", Consumed.with(Serdes.String(), rankingElementsSerde));
 
-        //rankingSource.map((s, rankingElements) -> new KeyValue<>(rankingElements.rankingElementId, rankingElements))
-        //        .groupBy((integer, rankingElements) -> )
+
+        rankingSource.map((s, rankingElements) -> new KeyValue<>(rankingElements.rankingElementId, rankingElements))
+                .groupBy((integer, rankingElements) -> )
 
 
         final Topology topology = builder.build();
