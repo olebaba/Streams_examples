@@ -37,15 +37,18 @@ public class ChoiceCounter {
         final Deserializer<JsonNode> nodeDeserializer = new JsonDeserializer();
         final Serde<JsonNode> jsonNodeSerde = Serdes.serdeFrom(nodeSerializer, nodeDeserializer);
 
+        String topic = "user-input";//"ranking_element_choices";
+
         KStream<String, JsonNode> rankingSource = builder
-                .stream("ranking_element_choices", Consumed.with(Serdes.String(), jsonNodeSerde));
+                .stream(topic, Consumed.with(Serdes.String(), jsonNodeSerde));
 
         //rankingSource.to("ranking_element_count"); //Pipe
 
-        ObjectMapper om = new ObjectMapper();
+        //ObjectMapper om = new ObjectMapper();
 
-        KStream<JsonNode, Long> rankingCount = rankingSource
-                .groupBy((s, jsonNode) -> jsonNode.get("user_id"))
+        KStream<String, Long> rankingCount = rankingSource
+                .flatMapValues((s, jsonNode) -> jsonNode.get("user_id"))
+                .groupBy((s, jsonNode) -> jsonNode.get("user_id").toString())
                 .count(Materialized.as("counting-store"))
                 .toStream();
 
@@ -53,7 +56,7 @@ public class ChoiceCounter {
             System.out.println(jsonNode.toPrettyString());
         });
 
-        rankingCount.to("ranking_element_count");
+        rankingCount.to("ranking_element_count", Produced.with(Serdes.String(), Serdes.Long()));
 
 
         final Topology topology = builder.build();
