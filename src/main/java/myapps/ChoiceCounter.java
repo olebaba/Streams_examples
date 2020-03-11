@@ -44,9 +44,8 @@ public class ChoiceCounter {
 
         ObjectMapper om = new ObjectMapper();
 
-        KStream<String, Long> rankingCount = rankingSource
-                .flatMapValues((s, jsonNode) -> jsonNode.get("user_id"))
-                .groupBy((s, jsonNode) -> s)
+        KStream<JsonNode, Long> rankingCount = rankingSource
+                .groupBy((s, jsonNode) -> jsonNode.get("user_id"))
                 .count(Materialized.as("counting-store"))
                 .toStream();
 
@@ -54,7 +53,7 @@ public class ChoiceCounter {
             System.out.println(jsonNode.toPrettyString());
         });
 
-        rankingCount.to("ranking_element_count", Produced.with(Serdes.String(), Serdes.Long()));
+        rankingCount.to("ranking_element_count");
 
 
         final Topology topology = builder.build();
