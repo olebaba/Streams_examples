@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Properties;
 
 public class Consumer{
@@ -31,9 +32,25 @@ public class Consumer{
 
         while (true){
             ConsumerRecords<String, Long> records = kafkaConsumer.poll(Duration.ofMillis(100));
-            for (ConsumerRecord<String, Long> record: records){
-                System.out.println("Key (user_id): " + record.key() + ", Value (# of selections): " + record.value());
-                //System.out.println("Partition: " + record.partition() + ", Offset: " + record.offset());
+
+            ConsumerRecord<String, Long> prev = null;
+            for (ConsumerRecord<String, Long> current: records){
+
+                /*ConsumerRecord<String, Long> temp = current;
+
+                if(current.equals(temp)){
+
+                }
+
+                System.out.println("Key (ranking_element_id): " + current.key()
+                        + ", Value (# of selections): " + current.value());
+                System.out.println("Key (user_id): " + prev.key()
+                        + ", Value (# of selections): " + prev.value());
+
+                prev = temp;*/
+
+                System.out.println("Key (user_id / ranking_element_id): " + current.key()
+                        + ", Value (# of selections): " + current.value());
             }
         }
     }

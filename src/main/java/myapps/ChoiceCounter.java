@@ -1,14 +1,10 @@
 package myapps;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
@@ -19,11 +15,8 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.state.KeyValueStore;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
@@ -53,22 +46,23 @@ public class ChoiceCounter {
 
             //rankingSource.to("ranking_element_count"); //Pipe
 
-            //ObjectMapper om = new ObjectMapper();
+            KStream<String, Long> userCount = rankingSource
+                    .filter((s, jsonNode) -> jsonNode != null)
+                    .groupBy((s, jsonNode) -> jsonNode.get("user_id").textValue())
+                    .count(Materialized.as("user-counting-store"))
+                    .toStream();
 
             KStream<String, Long> rankingCount = rankingSource
                     .filter((s, jsonNode) -> jsonNode != null)
-                    .groupBy((s, jsonNode) -> jsonNode.get("user_id").textValue())
-                    .count(Materialized.as("counting-store"))
+                    .groupBy((s, jsonNode) -> jsonNode.get("ranking_element_id").textValue())
+                    .count(Materialized.as("element-counting-store"))
                     .toStream();
 
             rankingSource.foreach((s, jsonNode) -> {
                 System.out.println(jsonNode.toPrettyString());
             });
 
-            //
-            // Consumer<Long, String> consumer = new KafkaConsumer<>(props);
-            //consumer.subscribe(Collections.singleton("ranking_element_count"));
-
+            userCount.to("ranking_element_count", Produced.with(Serdes.String(), Serdes.Long()));
             rankingCount.to("ranking_element_count", Produced.with(Serdes.String(), Serdes.Long()));
 
 
