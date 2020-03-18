@@ -11,14 +11,13 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Properties;
 
 public class Consumer{
     public static void main(String[] args) {
         Logger logger = LoggerFactory.getLogger(Consumer.class.getName());
 
-        String topic = "ranking_element_count";
+        String topicREC = "ranking_element_count", topicUC = "userID_count";
 
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
@@ -27,13 +26,19 @@ public class Consumer{
         props.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "test");
 
         KafkaConsumer<String, Long> kafkaConsumer = new KafkaConsumer<>(props);
+        KafkaConsumer<String, Long> kafkaConsumer1 = new KafkaConsumer<>(props);
 
-        kafkaConsumer.subscribe(Collections.singletonList(topic));
+        //{"user_id":"2", "ranking_element_id":"324", "position":"0"}
+
+        kafkaConsumer.subscribe(Collections.singletonList(topicREC));
+        kafkaConsumer1.subscribe(Collections.singletonList(topicUC));
+
+
 
         while (true){
             ConsumerRecords<String, Long> records = kafkaConsumer.poll(Duration.ofMillis(100));
 
-            ConsumerRecord<String, Long> prev = null;
+            //ConsumerRecord<String, Long> prev = null;
             for (ConsumerRecord<String, Long> current: records){
 
                 /*ConsumerRecord<String, Long> temp = current;
@@ -49,8 +54,7 @@ public class Consumer{
 
                 prev = temp;*/
 
-                System.out.println("Key (user_id / ranking_element_id): " + current.key()
-                        + ", Value (# of selections): " + current.value());
+                System.out.println("Key: " + current.key() + ", Value : " + current.value());
             }
         }
     }

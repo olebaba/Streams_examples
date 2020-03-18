@@ -11,10 +11,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.*;
 
 import java.util.Arrays;
 import java.util.Properties;
@@ -40,30 +37,33 @@ public class ChoiceCounter {
 
             String topic = "user-input3";//"ranking_element_choices";
 
-
             KStream<String, JsonNode> rankingSource = builder
                     .stream(topic, Consumed.with(Serdes.String(), jsonNodeSerde));
 
             //rankingSource.to("ranking_element_count"); //Pipe
 
-            KStream<String, Long> userCount = rankingSource
-                    .filter((s, jsonNode) -> jsonNode != null)
-                    .groupBy((s, jsonNode) -> jsonNode.get("user_id").textValue())
-                    .count(Materialized.as("user-counting-store"))
-                    .toStream();
 
-            KStream<String, Long> rankingCount = rankingSource
-                    .filter((s, jsonNode) -> jsonNode != null)
+            KTable<String, Long> userCount = rankingSource
+                    .filter((s1, jsonNode1) -> jsonNode1.has("user_id"))
+                    .groupBy((s1, jsonNode1) -> jsonNode1.get("user_id").textValue())
+                    .count(Materialized.as("user-store"));
+
+            KTable<String, Long> rankingElementCount = rankingSource
+                    .filter((s, jsonNode) -> jsonNode.has("ranking_element_id"))
                     .groupBy((s, jsonNode) -> jsonNode.get("ranking_element_id").textValue())
-                    .count(Materialized.as("element-counting-store"))
-                    .toStream();
+                    .count(Materialized.as("element-store"));
+
+            //KTable<String, String> joined = rankingElementCount.join(userCount,
+            //        (aLong, aLong2) -> "Ranking element = " + aLong + ", User id = " + aLong);
+
+            //joined.toStream().to("ranking_element_count", Produced.with(Serdes.String(), Serdes.String()));
 
             rankingSource.foreach((s, jsonNode) -> {
                 System.out.println(jsonNode.toPrettyString());
             });
 
-            userCount.to("ranking_element_count", Produced.with(Serdes.String(), Serdes.Long()));
-            rankingCount.to("ranking_element_count", Produced.with(Serdes.String(), Serdes.Long()));
+            userCount.toStream().to("user_count", Produced.with(Serdes.String(), Serdes.Long()));
+            rankingElementCount.toStream().to("ranking_element_count", Produced.with(Serdes.String(), Serdes.Long()));
 
 
             final Topology topology = builder.build();
