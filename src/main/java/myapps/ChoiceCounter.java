@@ -21,12 +21,10 @@ public class ChoiceCounter {
 
     public static void main(String[] args) throws Exception {
         try {
-
-
             Properties props = new Properties();
             props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-choice-counter");
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-            props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+            props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Long().getClass());
             props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.Long().getClass());
 
             final StreamsBuilder builder = new StreamsBuilder();
@@ -35,35 +33,35 @@ public class ChoiceCounter {
             final Deserializer<JsonNode> nodeDeserializer = new JsonDeserializer();
             final Serde<JsonNode> jsonNodeSerde = Serdes.serdeFrom(nodeSerializer, nodeDeserializer);
 
-            String topic = "user-input3";//"ranking_element_choices";
+            String topic = "ranking_element_choices";//"user-input";//
 
             KStream<String, JsonNode> rankingSource = builder
                     .stream(topic, Consumed.with(Serdes.String(), jsonNodeSerde));
 
+            rankingSource.foreach((s, jsonNode) -> System.out.println(jsonNode.toPrettyString()));
+
             //rankingSource.to("ranking_element_count"); //Pipe
 
 
-            KTable<String, Long> userCount = rankingSource
-                    .filter((s1, jsonNode1) -> jsonNode1.has("user_id"))
-                    .groupBy((s1, jsonNode1) -> jsonNode1.get("user_id").textValue())
+            KTable<Long, Long> userCount = rankingSource
+                    .filter((s1, jsonNode) -> jsonNode.has("user_id"))
+                    .groupBy((s1, jsonNode) -> jsonNode.get("user_id").longValue())
                     .count(Materialized.as("user-store"));
 
-            KTable<String, Long> rankingElementCount = rankingSource
+            KTable<Long, Long> rankingElementCount = rankingSource
                     .filter((s, jsonNode) -> jsonNode.has("ranking_element_id"))
-                    .groupBy((s, jsonNode) -> jsonNode.get("ranking_element_id").textValue())
-                    .count(Materialized.as("element-store"));
+                    .groupBy((s, jsonNode) -> jsonNode.get("ranking_element_id").longValue())
+                    .count(Materialized.as("ranking-element-store"));
 
-            //KTable<String, String> joined = rankingElementCount.join(userCount,
-            //        (aLong, aLong2) -> "Ranking element = " + aLong + ", User id = " + aLong);
+            KTable<Long, Long> campaignCount = rankingSource
+                    .filter((s, jsonNode) -> jsonNode.has("campaign_id"))
+                    .groupBy((s, jsonNode) -> jsonNode.get("campaign_id").longValue())
+                    .count(Materialized.as("campaign-store"));
 
-            //joined.toStream().to("ranking_element_count", Produced.with(Serdes.String(), Serdes.String()));
 
-            rankingSource.foreach((s, jsonNode) -> {
-                System.out.println(jsonNode.toPrettyString());
-            });
-
-            userCount.toStream().to("user_count", Produced.with(Serdes.String(), Serdes.Long()));
-            rankingElementCount.toStream().to("ranking_element_count", Produced.with(Serdes.String(), Serdes.Long()));
+            userCount.toStream().to("user_count", Produced.with(Serdes.Long(), Serdes.Long()));
+            rankingElementCount.toStream().to("ranking_element_count", Produced.with(Serdes.Long(), Serdes.Long()));
+            campaignCount.toStream().to("campaign_count", Produced.with(Serdes.Long(), Serdes.Long()));
 
 
             final Topology topology = builder.build();
